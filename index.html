@@ -14,10 +14,8 @@
     <style>
         body, html { margin: 0; padding: 0; height: 100%; font-family: sans-serif; overflow: hidden; }
         
-        /* 地図は全画面表示 */
         #map { width: 100vw; height: 100vh; z-index: 1; }
         
-        /* サイドバー（PC用：右側に固定・スライド可能） */
         #sidebar {
             position: absolute; top: 0; right: 0; width: 600px;
             height: 100vh; background: #fff; box-shadow: -2px 0 10px rgba(0,0,0,0.2);
@@ -26,7 +24,6 @@
         }
         #sidebar.hidden { transform: translateX(100%); }
 
-        /* サイドバー開閉ボタン */
         #toggle-btn {
             position: absolute; top: 15px; right: 615px; z-index: 1001;
             padding: 10px 15px; background: #fff; border: 2px solid #ccc;
@@ -39,21 +36,39 @@
             padding: 10px; background: #f8f9fa; border-bottom: 1px solid #ccc;
             display: flex; justify-content: space-between; align-items: center;
         }
-        #project-selector { padding: 5px; border-radius: 4px; border: 1px solid #ccc; max-width: 300px; }
+        
+        /* フィルターと期間ボタン周り */
+        .header-buttons { display: flex; align-items: center; gap: 5px; }
+        .control-btn { padding: 4px 8px; font-size: 12px; cursor: pointer; border: 1px solid #aaa; border-radius: 3px; background: #fff; }
+        .control-btn:hover { background: #eee; }
+        
+        #project-selector { padding: 5px; border-radius: 4px; border: 1px solid #ccc; max-width: 180px; font-size: 12px;}
+        
         #cat-table { flex: 1; font-size: 13px; }
+        
+        /* 列フィルター行の表示切替用 */
+        #cat-table:not(.show-filters) .tabulator-header-filter { display: none !important; }
+
+        /* 期間指定パネル */
+        #period-panel {
+            display: none; padding: 10px; background: #eef8ff; border-bottom: 1px solid #ccc;
+            font-size: 13px; align-items: center; gap: 10px;
+        }
+        #period-panel.show { display: flex; }
         
         #loading {
             display: none; padding: 10px; text-align: center; 
             background: #fff3cd; color: #856404; font-size: 14px;
         }
 
-        .popup-img { max-width: 150px; height: auto; margin-top: 8px; border-radius: 4px; }
+        /* 吹き出しの画像（念のためこちらも潰れないよう指定） */
+        .popup-img { max-width: 150px; max-height: 150px; object-fit: contain; margin-top: 8px; border-radius: 4px; }
+        
+        /* カスタムアイコン用クラス（枠線を消す） */
+        .custom-div-icon { background: none; border: none; }
 
-        /* スマホ用レイアウト（画面幅768px以下の場合：下部にスライド配置） */
         @media (max-width: 768px) {
-            #sidebar {
-                top: auto; bottom: 0; right: 0; width: 100vw; height: 50vh;
-            }
+            #sidebar { top: auto; bottom: 0; right: 0; width: 100vw; height: 50vh; }
             #sidebar.hidden { transform: translateY(100%); }
             #toggle-btn { top: auto; bottom: 52vh; right: 10px; transition: bottom 0.3s ease; }
             #sidebar.hidden ~ #toggle-btn { bottom: 10px; }
@@ -65,12 +80,24 @@
 <div id="map"></div>
 <div id="sidebar">
     <div id="sidebar-header">
-        <strong>🐈 データシート</strong>
+        <div class="header-buttons">
+            <strong>🐈 データシート</strong>
+            <button id="toggle-filter-btn" class="control-btn">🔍 フィルター</button>
+            <button id="toggle-period-btn" class="control-btn">📅 期間</button>
+        </div>
         <select id="project-selector">
             <option value="https://script.google.com/macros/s/AKfycbxxNvrgs0vTWNF5W8SWpSoaeFRFF5fK0iypGjDB427Y8e9SPZn84eqma7GV8mGOzHJSIA/exec">読み込み中...</option>
             <option value="https://script.google.com/macros/s/AKfycbzrGvMMEtmnZbL3cAdAq56MKoxmzE6W97kRAAGNtcgManeT2-231kqK7lVRrxI8j88/exec">読み込み中...</option>
         </select>
     </div>
+    
+    <div id="period-panel">
+        <label>目撃日時:</label>
+        <input type="date" id="date-start"> 〜 <input type="date" id="date-end">
+        <button id="apply-date-btn" class="control-btn">適用</button>
+        <button id="clear-date-btn" class="control-btn">解除</button>
+    </div>
+
     <div id="loading">データを読み込み中...</div>
     <div id="cat-table"></div>
 </div>
@@ -86,123 +113,162 @@
     const markerGroup = L.featureGroup().addTo(map);
     let markers = {}; 
 
-    // ▼ ネコ用カスタムアイコンの設定 ▼
-    const nekoIcon = L.icon({
-        iconUrl: 'icon-neko.png',
-        iconSize: [40, 40],       // アイコンのサイズ [幅, 高さ]
-        iconAnchor: [20, 40],     // 画像中央下を緯度経度の起点にする [幅の半分, 高さ]
-        popupAnchor: [0, -40]     // 吹き出しが表示される位置
+    // ▼ ネコ用カスタムアイコン（縦横比を保ちつつ、下端中央を緯度経度に合わせる特殊設定） ▼
+    const nekoIcon = L.divIcon({
+        className: 'custom-div-icon',
+        // 幅を40pxに固定し、高さは自動(auto)で比率を維持。
+        // bottom: 0, left: -20px(幅の半分) にすることで、どんな縦横比の画像でも中央下がピンポイントになります。
+        html: '<div style="position:relative;"><img src="icon-neko.png" style="width: 40px; height: auto; position: absolute; bottom: 0; left: -20px;"></div>',
+        iconSize: [0, 0], 
+        popupAnchor: [0, -40] // 吹き出しを少し上にズラす
     });
 
-    // 2. 表の初期化（スプレッドシートと全く同じ12列）
+    // 2. 表の初期化（headerFilter: "input" を追加して列フィルターを有効化）
     const table = new Tabulator("#cat-table", {
         data: [],
         layout: "fitColumns",
         columns: [
-            { title: "ID", field: "id", width: 60 },
-            { title: "送信日時", field: "timestamp", width: 100 },
-            { title: "名前", field: "nickname", width: 80 },
-            { title: "緯度", field: "lat", width: 80 },
-            { title: "経度", field: "lng", width: 80 },
-            { title: "目撃日時", field: "datetime", width: 100 },
-            { title: "頭数", field: "catCount", width: 60 },
-            { title: "耳カット", field: "earCut", width: 70 },
-            { title: "柄", field: "pattern", width: 80 },
-            { title: "備考", field: "remarks", width: 120 },
-            { title: "写真", field: "photoUrl", width: 60, formatter: (cell) => {
+            { title: "ID", field: "id", width: 60, headerFilter: "input" },
+            { title: "送信日時", field: "timestamp", width: 90 },
+            { title: "名前", field: "nickname", width: 80, headerFilter: "input" },
+            { title: "目撃日時", field: "datetime", width: 90, headerFilter: "input" },
+            { title: "頭数", field: "catCount", width: 60, headerFilter: "input" },
+            { title: "耳カット", field: "earCut", width: 70, headerFilter: "input" },
+            { title: "柄", field: "pattern", width: 80, headerFilter: "input" },
+            { title: "備考", field: "remarks", width: 120, headerFilter: "input" },
+            { title: "写真", field: "photoUrl", width: 50, formatter: (cell) => {
                 const url = cell.getValue();
                 return url ? `<a href="${url}" target="_blank">🖼️</a>` : "";
-            }},
-            { title: "裏ID", field: "internalId", width: 80 }
+            }}
         ],
     });
 
-    // 表の行をクリックした時：地図がピンの位置へ飛んで吹き出しを開く
+    // ▼ 表の行をクリックした時の動作（ズームせず、移動してポップアップを開くだけ） ▼
     table.on("rowClick", function(e, row){
         const rowData = row.getData();
         const targetMarker = markers[rowData.id];
         if(targetMarker) {
-            map.flyTo([rowData.lat, rowData.lng], 17, { animate: true, duration: 1.0 });
+            // flyTo(ズーム) ではなく panTo(平行移動) に変更
+            map.panTo([rowData.lat, rowData.lng], { animate: true, duration: 0.5 });
             targetMarker.openPopup();
         }
     });
 
-    // 3. データの取得と処理関数
+    // ▼ マーカーを地図上に描画する関数（フィルター時にも再利用） ▼
+    function renderMarkers(dataArray) {
+        markerGroup.clearLayers();
+        markers = {};
+        dataArray.forEach(cat => {
+            if(cat.lat && cat.lng) {
+                const marker = L.marker([cat.lat, cat.lng], { icon: nekoIcon });
+                
+                let popupHtml = `<b>${cat.nickname || '名無し'}</b><br>`;
+                popupHtml += `日時: ${cat.datetime || '不明'}<br>`;
+                popupHtml += `柄: ${cat.pattern || '-'} / 頭数: ${cat.catCount || 0}<br>`;
+                popupHtml += `耳カット: ${cat.earCut || '不明'}<br>`;
+                if (cat.photoUrl) {
+                    popupHtml += `<img src="${cat.photoUrl}" class="popup-img">`;
+                }
+                
+                marker.bindPopup(popupHtml);
+                markerGroup.addLayer(marker);
+                markers[cat.id] = marker; // IDで紐付け
+            }
+        });
+    }
+
+    // ▼ 表のデータがフィルター（絞り込み）されたら、地図のピンも更新する ▼
+    table.on("dataFiltered", function(filters, rows){
+        const filteredData = rows.map(r => r.getData());
+        renderMarkers(filteredData);
+    });
+
+    // 3. データの取得
     async function loadData(url) {
         document.getElementById('loading').style.display = 'block';
         
         try {
-            // URLに ?mode=admin を自動付与して管理アプリモードで通信する（既存アプリへの干渉を防止）
             const requestUrl = url.includes('?') ? `${url}&mode=admin` : `${url}?mode=admin`;
             const response = await fetch(requestUrl);
             const json = await response.json();
             
-            // GASから受け取った「シート名」と「データ」
-            const sheetName = json.sheetName;
-            const data = json.data;
-
-            // プルダウンの表示名をスプレッドシート名に自動変更
             const selector = document.getElementById('project-selector');
-            const selectedOption = selector.options[selector.selectedIndex];
-            selectedOption.text = sheetName;
+            selector.options[selector.selectedIndex].text = json.sheetName;
 
-            markerGroup.clearLayers();
-            markers = {};
+            // 表にデータをセット（この直後に dataFiltered イベントが発火し、マーカーが描画されます）
+            await table.setData(json.data);
 
-            // 地図上にピンを立てる
-            data.forEach(cat => {
-                if(cat.lat && cat.lng) {
-                    const marker = L.marker([cat.lat, cat.lng], { icon: nekoIcon });
-                    
-                    let popupHtml = `<b>${cat.nickname || '名無し'}</b><br>`;
-                    popupHtml += `日時: ${cat.datetime || '不明'}<br>`;
-                    popupHtml += `柄: ${cat.pattern || '-'} / 頭数: ${cat.catCount || 0}<br>`;
-                    popupHtml += `耳カット: ${cat.earCut || '不明'}<br>`;
-                    if (cat.photoUrl) {
-                        popupHtml += `<img src="${cat.photoUrl}" class="popup-img">`;
-                    }
-                    
-                    marker.bindPopup(popupHtml);
-                    markerGroup.addLayer(marker);
-                    markers[cat.id] = marker;
-                }
-            });
-
-            // 表にデータをセット
-            table.setData(data);
-
-            // すべてのピンが画面に収まるように自動移動・ズーム
+            // 初回のみ全体のピンが収まるようにズーム調整
             if(Object.keys(markers).length > 0) {
                 map.fitBounds(markerGroup.getBounds(), { padding: [50, 50] });
             }
 
         } catch (error) {
             console.error('データ取得エラー:', error);
-            alert('データの読み込みに失敗しました。GAS側のデプロイ状況などを確認してください。');
+            alert('データの読み込みに失敗しました。');
         } finally {
             document.getElementById('loading').style.display = 'none';
         }
     }
 
-    // 4. イベントリスナーの設定
+    // 4. 各種ボタンのイベント設定
+    
+    // ① フィルター行の表示切替
+    document.getElementById('toggle-filter-btn').addEventListener('click', () => {
+        document.getElementById('cat-table').classList.toggle('show-filters');
+    });
+
+    // ② 期間パネルの表示切替
+    document.getElementById('toggle-period-btn').addEventListener('click', () => {
+        document.getElementById('period-panel').classList.toggle('show');
+    });
+
+    // ③ 期間フィルターのカスタム処理
+    function customDateFilter(data, filterParams) {
+        if(!data.datetime) return false;
+        const rowTime = new Date(data.datetime).getTime();
+        if(isNaN(rowTime)) return false; // 日付形式が正しくない場合は除外
+
+        const startTime = filterParams.start ? new Date(filterParams.start).setHours(0,0,0,0) : 0;
+        const endTime = filterParams.end ? new Date(filterParams.end).setHours(23,59,59,999) : Infinity;
+        
+        return rowTime >= startTime && rowTime <= endTime;
+    }
+
+    // 適用ボタン
+    document.getElementById('apply-date-btn').addEventListener('click', () => {
+        const start = document.getElementById('date-start').value;
+        const end = document.getElementById('date-end').value;
+        
+        // 過去の期間フィルターを一旦削除してから追加
+        table.removeFilter(customDateFilter);
+        if(start || end) {
+            table.addFilter(customDateFilter, { start, end });
+        }
+    });
+
+    // 解除ボタン
+    document.getElementById('clear-date-btn').addEventListener('click', () => {
+        document.getElementById('date-start').value = "";
+        document.getElementById('date-end').value = "";
+        table.removeFilter(customDateFilter);
+    });
+
+    // プルダウン切り替え
     const selector = document.getElementById('project-selector');
     selector.addEventListener('change', (e) => {
         loadData(e.target.value);
     });
 
+    // サイドバーの開閉
     const toggleBtn = document.getElementById('toggle-btn');
     const sidebar = document.getElementById('sidebar');
-    
     toggleBtn.addEventListener('click', () => {
         sidebar.classList.toggle('hidden');
-        if(sidebar.classList.contains('hidden')) {
-            toggleBtn.textContent = "◀ 開く";
-        } else {
-            toggleBtn.textContent = "▶ 閉じる";
-        }
+        toggleBtn.textContent = sidebar.classList.contains('hidden') ? "◀ 開く" : "▶ 閉じる";
     });
 
-    // 初期データロード
+    // 初期ロード
     loadData(selector.value);
 </script>
 
