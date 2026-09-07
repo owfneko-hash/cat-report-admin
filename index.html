@@ -13,16 +13,20 @@
 
     <style>
         body, html { margin: 0; padding: 0; height: 100%; font-family: sans-serif; overflow: hidden; }
+        
+        /* 地図は全画面表示 */
         #map { width: 100vw; height: 100vh; z-index: 1; }
         
+        /* サイドバー（PC用：右側に固定・スライド可能） */
         #sidebar {
-            position: absolute; top: 0; right: 0; width: 600px; /* 列が増えたので少し幅広に */
+            position: absolute; top: 0; right: 0; width: 600px;
             height: 100vh; background: #fff; box-shadow: -2px 0 10px rgba(0,0,0,0.2);
             display: flex; flex-direction: column; z-index: 1000;
             transition: transform 0.3s ease;
         }
         #sidebar.hidden { transform: translateX(100%); }
 
+        /* サイドバー開閉ボタン */
         #toggle-btn {
             position: absolute; top: 15px; right: 615px; z-index: 1001;
             padding: 10px 15px; background: #fff; border: 2px solid #ccc;
@@ -45,6 +49,7 @@
 
         .popup-img { max-width: 150px; height: auto; margin-top: 8px; border-radius: 4px; }
 
+        /* スマホ用レイアウト（画面幅768px以下の場合：下部にスライド配置） */
         @media (max-width: 768px) {
             #sidebar {
                 top: auto; bottom: 0; right: 0; width: 100vw; height: 50vh;
@@ -78,19 +83,18 @@
         attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
 
-    const markerGroup = L.featureGroup().addTo(map); // fitBoundsを使うためfeatureGroupに変更
+    const markerGroup = L.featureGroup().addTo(map);
     let markers = {}; 
 
     // ▼ ネコ用カスタムアイコンの設定 ▼
-    // 画像サイズ(iconSize)は必要に応じて変更してください
     const nekoIcon = L.icon({
         iconUrl: 'icon-neko.png',
         iconSize: [40, 40],       // アイコンのサイズ [幅, 高さ]
         iconAnchor: [20, 40],     // 画像中央下を緯度経度の起点にする [幅の半分, 高さ]
-        popupAnchor: [0, -40]     // 吹き出しが出る位置 [横ズレ, 縦ズレ(マイナスで上方向)]
+        popupAnchor: [0, -40]     // 吹き出しが表示される位置
     });
 
-    // 2. 表の初期化（スプレッドシートと全く同じ列構成）
+    // 2. 表の初期化（スプレッドシートと全く同じ12列）
     const table = new Tabulator("#cat-table", {
         data: [],
         layout: "fitColumns",
@@ -113,6 +117,7 @@
         ],
     });
 
+    // 表の行をクリックした時：地図がピンの位置へ飛んで吹き出しを開く
     table.on("rowClick", function(e, row){
         const rowData = row.getData();
         const targetMarker = markers[rowData.id];
@@ -122,19 +127,21 @@
         }
     });
 
-    // 3. データの取得と処理
+    // 3. データの取得と処理関数
     async function loadData(url) {
         document.getElementById('loading').style.display = 'block';
         
         try {
-            const response = await fetch(url);
+            // URLに ?mode=admin を自動付与して管理アプリモードで通信する（既存アプリへの干渉を防止）
+            const requestUrl = url.includes('?') ? `${url}&mode=admin` : `${url}?mode=admin`;
+            const response = await fetch(requestUrl);
             const json = await response.json();
             
             // GASから受け取った「シート名」と「データ」
             const sheetName = json.sheetName;
             const data = json.data;
 
-            // ▼ プルダウンの表示名をスプレッドシートの名前に自動変更 ▼
+            // プルダウンの表示名をスプレッドシート名に自動変更
             const selector = document.getElementById('project-selector');
             const selectedOption = selector.options[selector.selectedIndex];
             selectedOption.text = sheetName;
@@ -142,10 +149,9 @@
             markerGroup.clearLayers();
             markers = {};
 
-            // ピンを立てる
+            // 地図上にピンを立てる
             data.forEach(cat => {
                 if(cat.lat && cat.lng) {
-                    // カスタムアイコンをセット
                     const marker = L.marker([cat.lat, cat.lng], { icon: nekoIcon });
                     
                     let popupHtml = `<b>${cat.nickname || '名無し'}</b><br>`;
@@ -165,15 +171,14 @@
             // 表にデータをセット
             table.setData(data);
 
-            // ▼ ピンが置かれた領域全体が画面に収まるように自動ズーム ▼
+            // すべてのピンが画面に収まるように自動移動・ズーム
             if(Object.keys(markers).length > 0) {
-                // paddingを設定することで、画面の端ギリギリにピンが寄らないように余裕を持たせています
                 map.fitBounds(markerGroup.getBounds(), { padding: [50, 50] });
             }
 
         } catch (error) {
             console.error('データ取得エラー:', error);
-            alert('データの読み込みに失敗しました。');
+            alert('データの読み込みに失敗しました。GAS側のデプロイ状況などを確認してください。');
         } finally {
             document.getElementById('loading').style.display = 'none';
         }
@@ -197,7 +202,7 @@
         }
     });
 
-    // 初期ロード
+    // 初期データロード
     loadData(selector.value);
 </script>
 
