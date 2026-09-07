@@ -12,7 +12,7 @@
     <script src="https://unpkg.com/tabulator-tables@5.5.2/dist/js/tabulator.min.js"></script>
 
     <style>
-        body, html { margin: 0; padding: 0; height: 100%; font-family: sans-serif; overflow: hidden; }
+        body, html { margin: 0; padding: 0; height: 100%; font-family: sans-serif; overflow: hidden; background: #e0f2f1; }
         
         #map { width: 100vw; height: 100vh; z-index: 1; }
         
@@ -37,35 +37,71 @@
             display: flex; justify-content: space-between; align-items: center;
         }
         
-        /* フィルターと期間ボタン周り */
         .header-buttons { display: flex; align-items: center; gap: 5px; }
-        .control-btn { padding: 4px 8px; font-size: 12px; cursor: pointer; border: 1px solid #aaa; border-radius: 3px; background: #fff; }
+        .control-btn { padding: 6px 10px; font-size: 13px; cursor: pointer; border: 1px solid #aaa; border-radius: 4px; background: #fff; font-weight: bold; }
         .control-btn:hover { background: #eee; }
         
         #project-selector { padding: 5px; border-radius: 4px; border: 1px solid #ccc; max-width: 180px; font-size: 12px;}
         
         #cat-table { flex: 1; font-size: 13px; }
         
-        /* 列フィルター行の表示切替用 */
-        #cat-table:not(.show-filters) .tabulator-header-filter { display: none !important; }
-
-        /* 期間指定パネル */
-        #period-panel {
-            display: none; padding: 10px; background: #eef8ff; border-bottom: 1px solid #ccc;
-            font-size: 13px; align-items: center; gap: 10px;
-        }
-        #period-panel.show { display: flex; }
-        
         #loading {
             display: none; padding: 10px; text-align: center; 
             background: #fff3cd; color: #856404; font-size: 14px;
         }
 
-        /* 吹き出しの画像（念のためこちらも潰れないよう指定） */
         .popup-img { max-width: 150px; max-height: 150px; object-fit: contain; margin-top: 8px; border-radius: 4px; }
-        
-        /* カスタムアイコン用クラス（枠線を消す） */
         .custom-div-icon { background: none; border: none; }
+
+        /* ==========================================
+           モーダル（ポップアップ）のデザイン
+           ========================================== */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0,0,0,0.4); z-index: 2000;
+            display: flex; justify-content: center; align-items: center;
+        }
+        .modal-overlay.hidden { display: none; }
+        
+        .modal-content {
+            background: #fff; width: 90%; max-width: 600px;
+            border-radius: 12px; border: 4px solid #b3e5fc; /* 水色の外枠 */
+            padding: 20px 25px; box-sizing: border-box; position: relative;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        
+        /* 右上の×ボタン */
+        .modal-close-btn {
+            position: absolute; top: -15px; right: -15px;
+            background: #fff; border: 2px solid #ccc; border-radius: 50%;
+            width: 32px; height: 32px; font-weight: bold; font-size: 16px;
+            cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            display: flex; justify-content: center; align-items: center;
+        }
+        .modal-close-btn:hover { background: #f4f4f4; }
+
+        .modal-header {
+            display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 10px;
+        }
+        .modal-title { color: #ff7043; font-weight: bold; font-size: 16px; }
+        
+        .modal-clear-btn {
+            background: #fff; color: #ff7043; border: 1px solid #ff7043;
+            border-radius: 20px; padding: 4px 15px; font-size: 12px; font-weight: bold; cursor: pointer;
+        }
+        .modal-clear-btn:hover { background: #fff3e0; }
+
+        .modal-body label { display: block; font-size: 12px; font-weight: bold; margin: 15px 0 5px; color: #555; }
+        .modal-body select, .modal-body input {
+            width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; box-sizing: border-box;
+        }
+        
+        .modal-apply-btn {
+            width: 100%; background: #ff7043; color: #fff; border: none; border-radius: 8px;
+            padding: 12px; font-size: 16px; font-weight: bold; margin-top: 25px; cursor: pointer;
+        }
+        .modal-apply-btn:hover { background: #f4511e; }
 
         @media (max-width: 768px) {
             #sidebar { top: auto; bottom: 0; right: 0; width: 100vw; height: 50vh; }
@@ -90,18 +126,53 @@
             <option value="https://script.google.com/macros/s/AKfycbzrGvMMEtmnZbL3cAdAq56MKoxmzE6W97kRAAGNtcgManeT2-231kqK7lVRrxI8j88/exec">読み込み中...</option>
         </select>
     </div>
-    
-    <div id="period-panel">
-        <label>目撃日時:</label>
-        <input type="date" id="date-start"> 〜 <input type="date" id="date-end">
-        <button id="apply-date-btn" class="control-btn">適用</button>
-        <button id="clear-date-btn" class="control-btn">解除</button>
-    </div>
 
     <div id="loading">データを読み込み中...</div>
     <div id="cat-table"></div>
 </div>
 <button id="toggle-btn">▶ 閉じる</button>
+
+<div id="filter-modal" class="modal-overlay hidden">
+    <div class="modal-content">
+        <button class="modal-close-btn" onclick="document.getElementById('filter-modal').classList.add('hidden')">×</button>
+        <div class="modal-header">
+            <span class="modal-title">詳細フィルター</span>
+            <button id="clear-filter-btn" class="modal-clear-btn">全て表示</button>
+        </div>
+        <div class="modal-body">
+            <label>頭数</label>
+            <select id="filter-catCount"><option value="">すべて</option></select>
+            
+            <label>耳カット</label>
+            <select id="filter-earCut"><option value="">すべて</option></select>
+            
+            <label>報告者名</label>
+            <select id="filter-nickname"><option value="">すべて</option></select>
+            
+            <label>柄</label>
+            <select id="filter-pattern"><option value="">すべて</option></select>
+        </div>
+        <button id="apply-filter-btn" class="modal-apply-btn">適用する</button>
+    </div>
+</div>
+
+<div id="period-modal" class="modal-overlay hidden">
+    <div class="modal-content">
+        <button class="modal-close-btn" onclick="document.getElementById('period-modal').classList.add('hidden')">×</button>
+        <div class="modal-header">
+            <span class="modal-title">期間フィルター</span>
+            <button id="clear-period-btn" class="modal-clear-btn">全て表示</button>
+        </div>
+        <div class="modal-body">
+            <label>いつ以降のデータ？</label>
+            <input type="date" id="date-start">
+            
+            <label>いつまでのデータ？</label>
+            <input type="date" id="date-end">
+        </div>
+        <button id="apply-period-btn" class="modal-apply-btn">適用する</button>
+    </div>
+</div>
 
 <script>
     // 1. 地図の初期化
@@ -113,29 +184,26 @@
     const markerGroup = L.featureGroup().addTo(map);
     let markers = {}; 
 
-    // ▼ ネコ用カスタムアイコン（縦横比を保ちつつ、下端中央を緯度経度に合わせる特殊設定） ▼
     const nekoIcon = L.divIcon({
         className: 'custom-div-icon',
-        // 幅を40pxに固定し、高さは自動(auto)で比率を維持。
-        // bottom: 0, left: -20px(幅の半分) にすることで、どんな縦横比の画像でも中央下がピンポイントになります。
         html: '<div style="position:relative;"><img src="icon-neko.png" style="width: 40px; height: auto; position: absolute; bottom: 0; left: -20px;"></div>',
         iconSize: [0, 0], 
-        popupAnchor: [0, -40] // 吹き出しを少し上にズラす
+        popupAnchor: [0, -40] 
     });
 
-    // 2. 表の初期化（headerFilter: "input" を追加して列フィルターを有効化）
+    // 2. 表の初期化（ヘッダーの入力欄は削除）
     const table = new Tabulator("#cat-table", {
         data: [],
         layout: "fitColumns",
         columns: [
-            { title: "ID", field: "id", width: 60, headerFilter: "input" },
+            { title: "ID", field: "id", width: 60 },
             { title: "送信日時", field: "timestamp", width: 90 },
-            { title: "名前", field: "nickname", width: 80, headerFilter: "input" },
-            { title: "目撃日時", field: "datetime", width: 90, headerFilter: "input" },
-            { title: "頭数", field: "catCount", width: 60, headerFilter: "input" },
-            { title: "耳カット", field: "earCut", width: 70, headerFilter: "input" },
-            { title: "柄", field: "pattern", width: 80, headerFilter: "input" },
-            { title: "備考", field: "remarks", width: 120, headerFilter: "input" },
+            { title: "名前", field: "nickname", width: 80 },
+            { title: "目撃日時", field: "datetime", width: 90 },
+            { title: "頭数", field: "catCount", width: 60 },
+            { title: "耳カット", field: "earCut", width: 70 },
+            { title: "柄", field: "pattern", width: 80 },
+            { title: "備考", field: "remarks", width: 120 },
             { title: "写真", field: "photoUrl", width: 50, formatter: (cell) => {
                 const url = cell.getValue();
                 return url ? `<a href="${url}" target="_blank">🖼️</a>` : "";
@@ -143,25 +211,21 @@
         ],
     });
 
-    // ▼ 表の行をクリックした時の動作（ズームせず、移動してポップアップを開くだけ） ▼
     table.on("rowClick", function(e, row){
         const rowData = row.getData();
         const targetMarker = markers[rowData.id];
         if(targetMarker) {
-            // flyTo(ズーム) ではなく panTo(平行移動) に変更
             map.panTo([rowData.lat, rowData.lng], { animate: true, duration: 0.5 });
             targetMarker.openPopup();
         }
     });
 
-    // ▼ マーカーを地図上に描画する関数（フィルター時にも再利用） ▼
     function renderMarkers(dataArray) {
         markerGroup.clearLayers();
         markers = {};
         dataArray.forEach(cat => {
             if(cat.lat && cat.lng) {
                 const marker = L.marker([cat.lat, cat.lng], { icon: nekoIcon });
-                
                 let popupHtml = `<b>${cat.nickname || '名無し'}</b><br>`;
                 popupHtml += `日時: ${cat.datetime || '不明'}<br>`;
                 popupHtml += `柄: ${cat.pattern || '-'} / 頭数: ${cat.catCount || 0}<br>`;
@@ -169,24 +233,42 @@
                 if (cat.photoUrl) {
                     popupHtml += `<img src="${cat.photoUrl}" class="popup-img">`;
                 }
-                
                 marker.bindPopup(popupHtml);
                 markerGroup.addLayer(marker);
-                markers[cat.id] = marker; // IDで紐付け
+                markers[cat.id] = marker; 
             }
         });
     }
 
-    // ▼ 表のデータがフィルター（絞り込み）されたら、地図のピンも更新する ▼
+    // フィルター適用時にピンを更新
     table.on("dataFiltered", function(filters, rows){
         const filteredData = rows.map(r => r.getData());
         renderMarkers(filteredData);
     });
 
+    // プルダウンの選択肢をデータから自動生成する関数
+    function updateFilterOptions(data) {
+        function populate(id, key) {
+            const select = document.getElementById(id);
+            select.innerHTML = '<option value="">すべて</option>';
+            // データから重複を消してソート
+            const uniqueValues = [...new Set(data.map(d => d[key]).filter(v => v !== "" && v !== null))].sort();
+            uniqueValues.forEach(val => {
+                const opt = document.createElement('option');
+                opt.value = val;
+                opt.textContent = val;
+                select.appendChild(opt);
+            });
+        }
+        populate('filter-catCount', 'catCount');
+        populate('filter-earCut', 'earCut');
+        populate('filter-nickname', 'nickname');
+        populate('filter-pattern', 'pattern');
+    }
+
     // 3. データの取得
     async function loadData(url) {
         document.getElementById('loading').style.display = 'block';
-        
         try {
             const requestUrl = url.includes('?') ? `${url}&mode=admin` : `${url}?mode=admin`;
             const response = await fetch(requestUrl);
@@ -195,14 +277,14 @@
             const selector = document.getElementById('project-selector');
             selector.options[selector.selectedIndex].text = json.sheetName;
 
-            // 表にデータをセット（この直後に dataFiltered イベントが発火し、マーカーが描画されます）
             await table.setData(json.data);
+            
+            // 取得したデータをもとにプルダウンの選択肢を更新
+            updateFilterOptions(json.data);
 
-            // 初回のみ全体のピンが収まるようにズーム調整
             if(Object.keys(markers).length > 0) {
                 map.fitBounds(markerGroup.getBounds(), { padding: [50, 50] });
             }
-
         } catch (error) {
             console.error('データ取得エラー:', error);
             alert('データの読み込みに失敗しました。');
@@ -211,56 +293,99 @@
         }
     }
 
-    // 4. 各種ボタンのイベント設定
-    
-    // ① フィルター行の表示切替
-    document.getElementById('toggle-filter-btn').addEventListener('click', () => {
-        document.getElementById('cat-table').classList.toggle('show-filters');
-    });
+    // ==========================================
+    // フィルターのロジック（期間と詳細を独立して管理）
+    // ==========================================
+    let currentDateFilter = null;
+    let currentTextFilters = [];
 
-    // ② 期間パネルの表示切替
-    document.getElementById('toggle-period-btn').addEventListener('click', () => {
-        document.getElementById('period-panel').classList.toggle('show');
-    });
-
-    // ③ 期間フィルターのカスタム処理
     function customDateFilter(data, filterParams) {
         if(!data.datetime) return false;
         const rowTime = new Date(data.datetime).getTime();
-        if(isNaN(rowTime)) return false; // 日付形式が正しくない場合は除外
-
+        if(isNaN(rowTime)) return false; 
         const startTime = filterParams.start ? new Date(filterParams.start).setHours(0,0,0,0) : 0;
         const endTime = filterParams.end ? new Date(filterParams.end).setHours(23,59,59,999) : Infinity;
-        
         return rowTime >= startTime && rowTime <= endTime;
     }
 
-    // 適用ボタン
-    document.getElementById('apply-date-btn').addEventListener('click', () => {
+    function applyAllFilters() {
+        table.clearFilter(); // 一旦すべて解除
+        
+        // 期間フィルターがあれば適用
+        if(currentDateFilter) {
+            table.addFilter(customDateFilter, currentDateFilter);
+        }
+        // 詳細フィルターがあれば全て適用
+        currentTextFilters.forEach(f => {
+            table.addFilter(f.field, "=", f.value);
+        });
+    }
+
+    // ▼ 詳細フィルター用イベント ▼
+    document.getElementById('toggle-filter-btn').addEventListener('click', () => {
+        document.getElementById('filter-modal').classList.remove('hidden');
+    });
+
+    document.getElementById('apply-filter-btn').addEventListener('click', () => {
+        currentTextFilters = [];
+        const nickname = document.getElementById('filter-nickname').value;
+        const catCount = document.getElementById('filter-catCount').value;
+        const earCut = document.getElementById('filter-earCut').value;
+        const pattern = document.getElementById('filter-pattern').value;
+
+        if(nickname) currentTextFilters.push({field: "nickname", value: nickname});
+        if(catCount) currentTextFilters.push({field: "catCount", value: catCount});
+        if(earCut) currentTextFilters.push({field: "earCut", value: earCut});
+        if(pattern) currentTextFilters.push({field: "pattern", value: pattern});
+        
+        applyAllFilters();
+        document.getElementById('filter-modal').classList.add('hidden');
+    });
+
+    document.getElementById('clear-filter-btn').addEventListener('click', () => {
+        document.getElementById('filter-nickname').value = "";
+        document.getElementById('filter-catCount').value = "";
+        document.getElementById('filter-earCut').value = "";
+        document.getElementById('filter-pattern').value = "";
+        
+        currentTextFilters = []; // 詳細フィルターのみリセット
+        applyAllFilters(); // 期間フィルターは残る
+        document.getElementById('filter-modal').classList.add('hidden');
+    });
+
+    // ▼ 期間フィルター用イベント ▼
+    document.getElementById('toggle-period-btn').addEventListener('click', () => {
+        document.getElementById('period-modal').classList.remove('hidden');
+    });
+
+    document.getElementById('apply-period-btn').addEventListener('click', () => {
         const start = document.getElementById('date-start').value;
         const end = document.getElementById('date-end').value;
-        
-        // 過去の期間フィルターを一旦削除してから追加
-        table.removeFilter(customDateFilter);
         if(start || end) {
-            table.addFilter(customDateFilter, { start, end });
+            currentDateFilter = { start, end };
+        } else {
+            currentDateFilter = null;
         }
+        applyAllFilters();
+        document.getElementById('period-modal').classList.add('hidden');
     });
 
-    // 解除ボタン
-    document.getElementById('clear-date-btn').addEventListener('click', () => {
+    document.getElementById('clear-period-btn').addEventListener('click', () => {
         document.getElementById('date-start').value = "";
         document.getElementById('date-end').value = "";
-        table.removeFilter(customDateFilter);
+        
+        currentDateFilter = null; // 期間フィルターのみリセット
+        applyAllFilters(); // 詳細フィルターは残る
+        document.getElementById('period-modal').classList.add('hidden');
     });
 
-    // プルダウン切り替え
+
+    // ▼ その他のイベントリスナー ▼
     const selector = document.getElementById('project-selector');
     selector.addEventListener('change', (e) => {
         loadData(e.target.value);
     });
 
-    // サイドバーの開閉
     const toggleBtn = document.getElementById('toggle-btn');
     const sidebar = document.getElementById('sidebar');
     toggleBtn.addEventListener('click', () => {
