@@ -45,9 +45,28 @@
         .tabulator-row.tabulator-selected { background-color: #ffcc80 !important; }
         .tabulator-row.tabulator-selected:hover { background-color: #ffb74d !important; }
 
-        #loading { display: none; padding: 10px; text-align: center; background: #fff3cd; color: #856404; font-size: 14px; }
         .popup-img { max-width: 150px; max-height: 150px; object-fit: contain; margin-top: 8px; border-radius: 4px; }
         .custom-div-icon { background: none; border: none; }
+
+        /* ▼ 画面全体を覆うローディング画面のデザイン ▼ */
+        #global-loading {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(5px);
+            z-index: 3000; display: flex; flex-direction: column; justify-content: center; align-items: center;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        #global-loading.hidden {
+            opacity: 0; visibility: hidden; pointer-events: none;
+        }
+        .spinner {
+            width: 50px; height: 50px; border: 5px solid rgba(255, 112, 67, 0.2);
+            border-left-color: #ff7043; border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .loading-text {
+            margin-top: 15px; font-size: 16px; font-weight: bold; color: #ff7043; letter-spacing: 2px;
+        }
 
         /* モーダル関連 */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.4); z-index: 2000; display: flex; justify-content: center; align-items: center; }
@@ -69,7 +88,7 @@
         /* ▼ カスタムプルダウン（アコーディオン式）のデザイン ▼ */
         .custom-select { border: 1px solid #ccc; border-radius: 6px; margin-bottom: 5px; background: #fff; }
         .custom-select summary { padding: 10px; cursor: pointer; font-size: 14px; list-style: none; display: flex; justify-content: space-between; align-items: center; user-select: none; }
-        .custom-select summary::-webkit-details-marker { display: none; } /* Safari用矢印消し */
+        .custom-select summary::-webkit-details-marker { display: none; } 
         .custom-select summary::after { content: "▼"; font-size: 10px; color: #888; }
         .custom-select[open] summary::after { content: "▲"; }
         .checkbox-group { border-top: 1px solid #ccc; padding: 10px; max-height: 150px; overflow-y: auto; background: #fafafa; display: flex; flex-wrap: wrap; gap: 10px; }
@@ -89,6 +108,12 @@
 </head>
 <body>
 
+<!-- ▼ 画面全体を覆うローディングUI ▼ -->
+<div id="global-loading">
+    <div class="spinner"></div>
+    <div class="loading-text">データを読み込み中...</div>
+</div>
+
 <div id="map"></div>
 <div id="sidebar">
     <div id="resizer"></div>
@@ -105,7 +130,6 @@
         </select>
     </div>
 
-    <div id="loading">データを読み込み中...</div>
     <div id="cat-table"></div>
 </div>
 
@@ -263,7 +287,9 @@
 
     // 3. データの取得
     async function loadData(url) {
-        document.getElementById('loading').style.display = 'block';
+        // ▼ 読み込み開始時に全画面ローディングを表示 ▼
+        document.getElementById('global-loading').classList.remove('hidden');
+        
         try {
             const requestUrl = url.includes('?') ? `${url}&mode=admin` : `${url}?mode=admin`;
             const response = await fetch(requestUrl);
@@ -282,7 +308,8 @@
             console.error('データ取得エラー:', error);
             alert('データの読み込みに失敗しました。');
         } finally {
-            document.getElementById('loading').style.display = 'none';
+            // ▼ 読み込み完了後に全画面ローディングを非表示 ▼
+            document.getElementById('global-loading').classList.add('hidden');
         }
     }
 
@@ -399,6 +426,7 @@
         loadData(e.target.value);
     });
 
+    // 初期ロード
     loadData(selector.value);
 </script>
 
