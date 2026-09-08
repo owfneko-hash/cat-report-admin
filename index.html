@@ -16,24 +16,36 @@
         
         #map { width: 100vw; height: 100vh; z-index: 1; }
         
+        /* ==========================================
+           サイドバー（データシート）のベース設定
+           ========================================== */
         #sidebar {
-            position: absolute; top: 0; right: 0; width: 600px;
-            height: 100vh; background: #fff; box-shadow: -2px 0 10px rgba(0,0,0,0.2);
+            position: absolute; top: 0; right: 0; 
+            width: 600px; /* 初期幅 */
+            height: 100vh; 
+            background: #fff; box-shadow: -2px 0 10px rgba(0,0,0,0.2);
             display: flex; flex-direction: column; z-index: 1000;
-            transition: transform 0.3s ease;
+            transition: transform 0.3s ease; /* 開閉アニメーション */
         }
         #sidebar.hidden { transform: translateX(100%); }
 
-        #toggle-btn {
-            position: absolute; top: 15px; right: 615px; z-index: 1001;
-            padding: 10px 15px; background: #fff; border: 2px solid #ccc;
-            border-radius: 5px; cursor: pointer; font-weight: bold;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2); transition: right 0.3s ease;
+        /* 幅変更用ドラッグハンドル（PC用: 左端） */
+        #resizer {
+            position: absolute; top: 0; left: 0; bottom: 0; width: 6px;
+            background: #d3d3d3; cursor: ew-resize; z-index: 1010;
         }
-        #sidebar.hidden ~ #toggle-btn { right: 15px; }
+        #resizer:hover { background: #999; }
+
+        /* 開閉ボタン（サイドバー本体にくっつけて配置） */
+        #toggle-btn {
+            position: absolute; top: 15px; left: -90px; width: 85px; z-index: 1001;
+            padding: 10px 0; text-align: center; background: #fff; border: 2px solid #ccc;
+            border-radius: 5px 0 0 5px; border-right: none; cursor: pointer; font-weight: bold;
+            box-shadow: -2px 2px 5px rgba(0,0,0,0.1);
+        }
 
         #sidebar-header {
-            padding: 10px; background: #f8f9fa; border-bottom: 1px solid #ccc;
+            padding: 10px 10px 10px 20px; background: #f8f9fa; border-bottom: 1px solid #ccc;
             display: flex; justify-content: space-between; align-items: center;
         }
         
@@ -43,8 +55,12 @@
         
         #project-selector { padding: 5px; border-radius: 4px; border: 1px solid #ccc; max-width: 180px; font-size: 12px;}
         
-        #cat-table { flex: 1; font-size: 13px; }
+        #cat-table { flex: 1; font-size: 13px; margin-left: 6px; /* リサイザーの幅分空ける */ }
         
+        /* 選択された行のハイライト（オレンジ色） */
+        .tabulator-row.tabulator-selected { background-color: #ffcc80 !important; }
+        .tabulator-row.tabulator-selected:hover { background-color: #ffb74d !important; }
+
         #loading {
             display: none; padding: 10px; text-align: center; 
             background: #fff3cd; color: #856404; font-size: 14px;
@@ -53,61 +69,47 @@
         .popup-img { max-width: 150px; max-height: 150px; object-fit: contain; margin-top: 8px; border-radius: 4px; }
         .custom-div-icon { background: none; border: none; }
 
-        /* ==========================================
-           モーダル（ポップアップ）のデザイン
-           ========================================== */
-        .modal-overlay {
-            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-            background: rgba(0,0,0,0.4); z-index: 2000;
-            display: flex; justify-content: center; align-items: center;
-        }
+        /* モーダル関連 */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.4); z-index: 2000; display: flex; justify-content: center; align-items: center; }
         .modal-overlay.hidden { display: none; }
-        
-        .modal-content {
-            background: #fff; width: 90%; max-width: 600px;
-            border-radius: 12px; border: 4px solid #b3e5fc; /* 水色の外枠 */
-            padding: 20px 25px; box-sizing: border-box; position: relative;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-        }
-        
-        /* 右上の×ボタン */
-        .modal-close-btn {
-            position: absolute; top: -15px; right: -15px;
-            background: #fff; border: 2px solid #ccc; border-radius: 50%;
-            width: 32px; height: 32px; font-weight: bold; font-size: 16px;
-            cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-            display: flex; justify-content: center; align-items: center;
-        }
+        .modal-content { background: #fff; width: 90%; max-width: 600px; max-height: 90vh; overflow-y: auto; border-radius: 12px; border: 4px solid #b3e5fc; padding: 20px 25px; box-sizing: border-box; position: relative; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        .modal-close-btn { position: absolute; top: 10px; right: 10px; background: #fff; border: 2px solid #ccc; border-radius: 50%; width: 32px; height: 32px; font-weight: bold; font-size: 16px; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.2); display: flex; justify-content: center; align-items: center; z-index: 10; }
         .modal-close-btn:hover { background: #f4f4f4; }
-
-        .modal-header {
-            display: flex; justify-content: space-between; align-items: center;
-            border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 10px;
-        }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 10px; }
         .modal-title { color: #ff7043; font-weight: bold; font-size: 16px; }
-        
-        .modal-clear-btn {
-            background: #fff; color: #ff7043; border: 1px solid #ff7043;
-            border-radius: 20px; padding: 4px 15px; font-size: 12px; font-weight: bold; cursor: pointer;
-        }
+        .modal-clear-btn { background: #fff; color: #ff7043; border: 1px solid #ff7043; border-radius: 20px; padding: 4px 15px; font-size: 12px; font-weight: bold; cursor: pointer; margin-right: 35px; }
         .modal-clear-btn:hover { background: #fff3e0; }
-
-        .modal-body label { display: block; font-size: 12px; font-weight: bold; margin: 15px 0 5px; color: #555; }
-        .modal-body select, .modal-body input {
-            width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; box-sizing: border-box;
-        }
-        
-        .modal-apply-btn {
-            width: 100%; background: #ff7043; color: #fff; border: none; border-radius: 8px;
-            padding: 12px; font-size: 16px; font-weight: bold; margin-top: 25px; cursor: pointer;
-        }
+        .modal-body label.section-title { display: block; font-size: 13px; font-weight: bold; margin: 15px 0 5px; color: #555; }
+        .date-inputs { display: flex; gap: 10px; align-items: center; }
+        .date-inputs input { flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; }
+        .checkbox-group { border: 1px solid #ccc; border-radius: 6px; padding: 10px; max-height: 90px; overflow-y: auto; background: #fafafa; display: flex; flex-wrap: wrap; gap: 10px; }
+        .checkbox-group label { display: flex; align-items: center; gap: 4px; font-size: 13px; font-weight: normal; cursor: pointer; color: #333; margin: 0; }
+        .modal-apply-btn { width: 100%; background: #ff7043; color: #fff; border: none; border-radius: 8px; padding: 12px; font-size: 16px; font-weight: bold; margin-top: 25px; cursor: pointer; }
         .modal-apply-btn:hover { background: #f4511e; }
 
+        /* ==========================================
+           スマホ用レイアウト
+           ========================================== */
         @media (max-width: 768px) {
-            #sidebar { top: auto; bottom: 0; right: 0; width: 100vw; height: 50vh; }
+            #sidebar { 
+                top: auto; bottom: 0; right: 0; 
+                width: 100vw !important; height: 50vh; 
+            }
             #sidebar.hidden { transform: translateY(100%); }
-            #toggle-btn { top: auto; bottom: 52vh; right: 10px; transition: bottom 0.3s ease; }
-            #sidebar.hidden ~ #toggle-btn { bottom: 10px; }
+            
+            /* スマホ時のリサイザー（上端） */
+            #resizer {
+                top: 0; left: 0; width: 100%; height: 6px;
+                cursor: ns-resize;
+            }
+            #cat-table { margin-left: 0; margin-top: 6px; }
+            
+            /* スマホ時の開閉ボタン */
+            #toggle-btn {
+                top: -45px; left: auto; right: 10px; width: auto;
+                border-radius: 5px 5px 0 0; border: 2px solid #ccc; border-bottom: none;
+                padding: 10px 15px;
+            }
         }
     </style>
 </head>
@@ -115,11 +117,15 @@
 
 <div id="map"></div>
 <div id="sidebar">
+    <!-- ドラッグリサイズ用ハンドル -->
+    <div id="resizer"></div>
+    <!-- 開閉トグルボタン -->
+    <button id="toggle-btn">▶ 閉じる</button>
+
     <div id="sidebar-header">
         <div class="header-buttons">
             <strong>🐈 データシート</strong>
-            <button id="toggle-filter-btn" class="control-btn">🔍 フィルター</button>
-            <button id="toggle-period-btn" class="control-btn">📅 期間</button>
+            <button id="toggle-filter-btn" class="control-btn">🔍 詳細フィルター</button>
         </div>
         <select id="project-selector">
             <option value="https://script.google.com/macros/s/AKfycbxxNvrgs0vTWNF5W8SWpSoaeFRFF5fK0iypGjDB427Y8e9SPZn84eqma7GV8mGOzHJSIA/exec">読み込み中...</option>
@@ -130,47 +136,31 @@
     <div id="loading">データを読み込み中...</div>
     <div id="cat-table"></div>
 </div>
-<button id="toggle-btn">▶ 閉じる</button>
 
 <div id="filter-modal" class="modal-overlay hidden">
     <div class="modal-content">
         <button class="modal-close-btn" onclick="document.getElementById('filter-modal').classList.add('hidden')">×</button>
         <div class="modal-header">
             <span class="modal-title">詳細フィルター</span>
-            <button id="clear-filter-btn" class="modal-clear-btn">全て表示</button>
+            <button id="clear-filter-btn" class="modal-clear-btn">全て表示(解除)</button>
         </div>
         <div class="modal-body">
-            <label>頭数</label>
-            <select id="filter-catCount"><option value="">すべて</option></select>
-            
-            <label>耳カット</label>
-            <select id="filter-earCut"><option value="">すべて</option></select>
-            
-            <label>報告者名</label>
-            <select id="filter-nickname"><option value="">すべて</option></select>
-            
-            <label>柄</label>
-            <select id="filter-pattern"><option value="">すべて</option></select>
+            <label class="section-title">📅 目撃期間</label>
+            <div class="date-inputs">
+                <input type="date" id="filter-date-start">
+                <span>〜</span>
+                <input type="date" id="filter-date-end">
+            </div>
+            <label class="section-title">🐾 頭数 (複数選択可)</label>
+            <div id="filter-catCount" class="checkbox-group"></div>
+            <label class="section-title">✂️ 耳カット (複数選択可)</label>
+            <div id="filter-earCut" class="checkbox-group"></div>
+            <label class="section-title">👤 報告者名 (複数選択可)</label>
+            <div id="filter-nickname" class="checkbox-group"></div>
+            <label class="section-title">🎨 柄 (複数選択可)</label>
+            <div id="filter-pattern" class="checkbox-group"></div>
         </div>
         <button id="apply-filter-btn" class="modal-apply-btn">適用する</button>
-    </div>
-</div>
-
-<div id="period-modal" class="modal-overlay hidden">
-    <div class="modal-content">
-        <button class="modal-close-btn" onclick="document.getElementById('period-modal').classList.add('hidden')">×</button>
-        <div class="modal-header">
-            <span class="modal-title">期間フィルター</span>
-            <button id="clear-period-btn" class="modal-clear-btn">全て表示</button>
-        </div>
-        <div class="modal-body">
-            <label>いつ以降のデータ？</label>
-            <input type="date" id="date-start">
-            
-            <label>いつまでのデータ？</label>
-            <input type="date" id="date-end">
-        </div>
-        <button id="apply-period-btn" class="modal-apply-btn">適用する</button>
     </div>
 </div>
 
@@ -191,10 +181,11 @@
         popupAnchor: [0, -40] 
     });
 
-    // 2. 表の初期化（ヘッダーの入力欄は削除）
+    // 2. 表の初期化 (selectableRows を有効化)
     const table = new Tabulator("#cat-table", {
         data: [],
         layout: "fitColumns",
+        selectableRows: 1, // 行の選択を1行のみ許可
         columns: [
             { title: "ID", field: "id", width: 60 },
             { title: "送信日時", field: "timestamp", width: 90 },
@@ -211,6 +202,7 @@
         ],
     });
 
+    // 表の行をクリックした時の処理
     table.on("rowClick", function(e, row){
         const rowData = row.getData();
         const targetMarker = markers[rowData.id];
@@ -236,28 +228,35 @@
                 marker.bindPopup(popupHtml);
                 markerGroup.addLayer(marker);
                 markers[cat.id] = marker; 
+                
+                // ▼ マーカーをクリックした時、表の該当行を選択・スクロールする ▼
+                marker.on('click', () => {
+                    table.deselectRow(); // 他の選択を解除
+                    table.selectRow(cat.id); // 該当行を選択（オレンジ色になる）
+                    table.scrollToRow(cat.id, "center", false).catch(err => {}); // その行までスクロール
+                });
             }
         });
     }
 
-    // フィルター適用時にピンを更新
     table.on("dataFiltered", function(filters, rows){
         const filteredData = rows.map(r => r.getData());
         renderMarkers(filteredData);
     });
 
-    // プルダウンの選択肢をデータから自動生成する関数
-    function updateFilterOptions(data) {
+    function updateFilterCheckboxes(data) {
         function populate(id, key) {
-            const select = document.getElementById(id);
-            select.innerHTML = '<option value="">すべて</option>';
-            // データから重複を消してソート
+            const container = document.getElementById(id);
+            container.innerHTML = '';
             const uniqueValues = [...new Set(data.map(d => d[key]).filter(v => v !== "" && v !== null))].sort();
             uniqueValues.forEach(val => {
-                const opt = document.createElement('option');
-                opt.value = val;
-                opt.textContent = val;
-                select.appendChild(opt);
+                const label = document.createElement('label');
+                const cb = document.createElement('input');
+                cb.type = 'checkbox';
+                cb.value = val;
+                label.appendChild(cb);
+                label.appendChild(document.createTextNode(val));
+                container.appendChild(label);
             });
         }
         populate('filter-catCount', 'catCount');
@@ -278,9 +277,7 @@
             selector.options[selector.selectedIndex].text = json.sheetName;
 
             await table.setData(json.data);
-            
-            // 取得したデータをもとにプルダウンの選択肢を更新
-            updateFilterOptions(json.data);
+            updateFilterCheckboxes(json.data);
 
             if(Object.keys(markers).length > 0) {
                 map.fitBounds(markerGroup.getBounds(), { padding: [50, 50] });
@@ -293,104 +290,123 @@
         }
     }
 
-    // ==========================================
-    // フィルターのロジック（期間と詳細を独立して管理）
-    // ==========================================
-    let currentDateFilter = null;
-    let currentTextFilters = [];
-
-    function customDateFilter(data, filterParams) {
-        if(!data.datetime) return false;
-        const rowTime = new Date(data.datetime).getTime();
-        if(isNaN(rowTime)) return false; 
-        const startTime = filterParams.start ? new Date(filterParams.start).setHours(0,0,0,0) : 0;
-        const endTime = filterParams.end ? new Date(filterParams.end).setHours(23,59,59,999) : Infinity;
-        return rowTime >= startTime && rowTime <= endTime;
-    }
-
-    function applyAllFilters() {
-        table.clearFilter(); // 一旦すべて解除
-        
-        // 期間フィルターがあれば適用
-        if(currentDateFilter) {
-            table.addFilter(customDateFilter, currentDateFilter);
+    // 複合フィルター
+    function complexFilter(data, filterParams) {
+        if (filterParams.start || filterParams.end) {
+            if (!data.datetime) return false;
+            const rowTime = new Date(data.datetime).getTime();
+            if (isNaN(rowTime)) return false; 
+            const startTime = filterParams.start ? new Date(filterParams.start).setHours(0,0,0,0) : 0;
+            const endTime = filterParams.end ? new Date(filterParams.end).setHours(23,59,59,999) : Infinity;
+            if (rowTime < startTime || rowTime > endTime) return false;
         }
-        // 詳細フィルターがあれば全て適用
-        currentTextFilters.forEach(f => {
-            table.addFilter(f.field, "=", f.value);
-        });
+        if (filterParams.catCounts.length > 0 && !filterParams.catCounts.includes(String(data.catCount))) return false;
+        if (filterParams.earCuts.length > 0 && !filterParams.earCuts.includes(String(data.earCut))) return false;
+        if (filterParams.nicknames.length > 0 && !filterParams.nicknames.includes(String(data.nickname))) return false;
+        if (filterParams.patterns.length > 0 && !filterParams.patterns.includes(String(data.pattern))) return false;
+        return true;
     }
 
-    // ▼ 詳細フィルター用イベント ▼
+    function getCheckedValues(containerId) {
+        const checkboxes = document.querySelectorAll(`#${containerId} input[type="checkbox"]:checked`);
+        return Array.from(checkboxes).map(cb => cb.value);
+    }
+
+    // モーダル操作
     document.getElementById('toggle-filter-btn').addEventListener('click', () => {
         document.getElementById('filter-modal').classList.remove('hidden');
     });
 
     document.getElementById('apply-filter-btn').addEventListener('click', () => {
-        currentTextFilters = [];
-        const nickname = document.getElementById('filter-nickname').value;
-        const catCount = document.getElementById('filter-catCount').value;
-        const earCut = document.getElementById('filter-earCut').value;
-        const pattern = document.getElementById('filter-pattern').value;
-
-        if(nickname) currentTextFilters.push({field: "nickname", value: nickname});
-        if(catCount) currentTextFilters.push({field: "catCount", value: catCount});
-        if(earCut) currentTextFilters.push({field: "earCut", value: earCut});
-        if(pattern) currentTextFilters.push({field: "pattern", value: pattern});
-        
-        applyAllFilters();
+        const filterParams = {
+            start: document.getElementById('filter-date-start').value,
+            end: document.getElementById('filter-date-end').value,
+            catCounts: getCheckedValues('filter-catCount'),
+            earCuts: getCheckedValues('filter-earCut'),
+            nicknames: getCheckedValues('filter-nickname'),
+            patterns: getCheckedValues('filter-pattern')
+        };
+        table.clearFilter();
+        table.addFilter(complexFilter, filterParams);
         document.getElementById('filter-modal').classList.add('hidden');
     });
 
     document.getElementById('clear-filter-btn').addEventListener('click', () => {
-        document.getElementById('filter-nickname').value = "";
-        document.getElementById('filter-catCount').value = "";
-        document.getElementById('filter-earCut').value = "";
-        document.getElementById('filter-pattern').value = "";
-        
-        currentTextFilters = []; // 詳細フィルターのみリセット
-        applyAllFilters(); // 期間フィルターは残る
+        document.getElementById('filter-date-start').value = "";
+        document.getElementById('filter-date-end').value = "";
+        const allCheckboxes = document.querySelectorAll('.checkbox-group input[type="checkbox"]');
+        allCheckboxes.forEach(cb => cb.checked = false);
+        table.clearFilter();
         document.getElementById('filter-modal').classList.add('hidden');
     });
 
-    // ▼ 期間フィルター用イベント ▼
-    document.getElementById('toggle-period-btn').addEventListener('click', () => {
-        document.getElementById('period-modal').classList.remove('hidden');
-    });
+    // ==========================================
+    // ドラッグリサイズ（幅・高さ変更）の実装
+    // ==========================================
+    const resizer = document.getElementById('resizer');
+    const sidebar = document.getElementById('sidebar');
+    let isResizing = false;
 
-    document.getElementById('apply-period-btn').addEventListener('click', () => {
-        const start = document.getElementById('date-start').value;
-        const end = document.getElementById('date-end').value;
-        if(start || end) {
-            currentDateFilter = { start, end };
-        } else {
-            currentDateFilter = null;
-        }
-        applyAllFilters();
-        document.getElementById('period-modal').classList.add('hidden');
-    });
+    // マウス・タッチ両対応でリサイズ開始
+    const startResize = (e) => {
+        isResizing = true;
+        sidebar.style.transition = 'none'; // ドラッグ中はアニメーションを無効化
+        document.body.style.cursor = window.innerWidth <= 768 ? 'ns-resize' : 'ew-resize';
+    };
+    resizer.addEventListener('mousedown', startResize);
+    resizer.addEventListener('touchstart', startResize, {passive: true});
 
-    document.getElementById('clear-period-btn').addEventListener('click', () => {
-        document.getElementById('date-start').value = "";
-        document.getElementById('date-end').value = "";
+    // リサイズ中の処理
+    const handleResize = (e) => {
+        if (!isResizing) return;
         
-        currentDateFilter = null; // 期間フィルターのみリセット
-        applyAllFilters(); // 詳細フィルターは残る
-        document.getElementById('period-modal').classList.add('hidden');
+        let clientX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
+        let clientY = e.type.includes('mouse') ? e.clientY : e.touches[0].clientY;
+
+        if (window.innerWidth <= 768) {
+            // スマホ：高さを変更（Y座標で計算）
+            let newHeight = window.innerHeight - clientY;
+            if(newHeight < 100) newHeight = 100;
+            if(newHeight > window.innerHeight - 60) newHeight = window.innerHeight - 60;
+            sidebar.style.height = newHeight + 'px';
+        } else {
+            // PC：幅を変更（X座標で計算）
+            let newWidth = window.innerWidth - clientX;
+            if(newWidth < 300) newWidth = 300;
+            if(newWidth > window.innerWidth - 100) newWidth = window.innerWidth - 100;
+            sidebar.style.width = newWidth + 'px';
+        }
+    };
+    document.addEventListener('mousemove', handleResize);
+    document.addEventListener('touchmove', handleResize, {passive: true});
+
+    // リサイズ終了処理
+    const stopResize = () => {
+        if (isResizing) {
+            isResizing = false;
+            document.body.style.cursor = 'default';
+            sidebar.style.transition = 'transform 0.3s ease'; // アニメーションを再有効化
+        }
+    };
+    document.addEventListener('mouseup', stopResize);
+    document.addEventListener('touchend', stopResize);
+
+    // ==========================================
+    // サイドバー開閉ボタン
+    // ==========================================
+    const toggleBtn = document.getElementById('toggle-btn');
+    toggleBtn.addEventListener('click', () => {
+        sidebar.classList.toggle('hidden');
+        if(sidebar.classList.contains('hidden')) {
+            toggleBtn.textContent = window.innerWidth <= 768 ? "▲ 開く" : "◀ 開く";
+        } else {
+            toggleBtn.textContent = window.innerWidth <= 768 ? "▼ 閉じる" : "▶ 閉じる";
+        }
     });
 
-
-    // ▼ その他のイベントリスナー ▼
     const selector = document.getElementById('project-selector');
     selector.addEventListener('change', (e) => {
         loadData(e.target.value);
-    });
-
-    const toggleBtn = document.getElementById('toggle-btn');
-    const sidebar = document.getElementById('sidebar');
-    toggleBtn.addEventListener('click', () => {
-        sidebar.classList.toggle('hidden');
-        toggleBtn.textContent = sidebar.classList.contains('hidden') ? "◀ 開く" : "▶ 閉じる";
     });
 
     // 初期ロード
