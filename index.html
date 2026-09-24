@@ -124,9 +124,11 @@
             <strong>🐈 データシート</strong>
             <button id="toggle-filter-btn" class="control-btn">🔍 詳細フィルター</button>
         </div>
+        <!-- ▼ 変更点：プルダウンの選択肢を追加し、名前を固定 ▼ -->
         <select id="project-selector">
-            <option value="https://script.google.com/macros/s/AKfycbxxNvrgs0vTWNF5W8SWpSoaeFRFF5fK0iypGjDB427Y8e9SPZn84eqma7GV8mGOzHJSIA/exec">読み込み中...</option>
-            <option value="https://script.google.com/macros/s/AKfycbzrGvMMEtmnZbL3cAdAq56MKoxmzE6W97kRAAGNtcgManeT2-231kqK7lVRrxI8j88/exec">読み込み中...</option>
+            <option value="https://script.google.com/macros/s/AKfycbxxNvrgs0vTWNF5W8SWpSoaeFRFF5fK0iypGjDB427Y8e9SPZn84eqma7GV8mGOzHJSIA/exec">北大東</option>
+            <option value="https://script.google.com/macros/s/AKfycbzrGvMMEtmnZbL3cAdAq56MKoxmzE6W97kRAAGNtcgManeT2-231kqK7lVRrxI8j88/exec">南大東</option>
+            <option value="https://script.google.com/macros/s/AKfycbzrQ10Aq9k8jNR7RAwcpSTvYFFLze5ZJvEo_eLURK0_Ck_7HTs0ycmDVfgUN_bCmzSP/exec">東村</option>
         </select>
     </div>
 
@@ -295,8 +297,9 @@
             const response = await fetch(requestUrl);
             const json = await response.json();
             
-            const selector = document.getElementById('project-selector');
-            selector.options[selector.selectedIndex].text = json.sheetName;
+            // ▼ 変更点：プルダウンの名前を固定にするため、JSONのシート名で上書きする処理をコメントアウト ▼
+            // const selector = document.getElementById('project-selector');
+            // selector.options[selector.selectedIndex].text = json.sheetName;
 
             await table.setData(json.data);
             updateFilterCheckboxes(json.data);
