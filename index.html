@@ -48,25 +48,35 @@
         .popup-img { max-width: 150px; max-height: 150px; object-fit: contain; margin-top: 8px; border-radius: 4px; }
         .custom-div-icon { background: none; border: none; }
 
-        /* ▼ 画面全体を覆うローディング画面のデザイン ▼ */
+        /* ▼ ストリートビューボタンのスタイル ▼ */
+        .streetview-btn {
+            display: inline-block;
+            margin-top: 8px;
+            padding: 6px 12px;
+            background-color: #4285f4;
+            color: #fff !important;
+            text-decoration: none;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        .streetview-btn:hover { background-color: #3367d6; }
+
+        /* ローディング画面 */
         #global-loading {
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
             background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(5px);
             z-index: 3000; display: flex; flex-direction: column; justify-content: center; align-items: center;
             transition: opacity 0.3s ease, visibility 0.3s ease;
         }
-        #global-loading.hidden {
-            opacity: 0; visibility: hidden; pointer-events: none;
-        }
+        #global-loading.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
         .spinner {
             width: 50px; height: 50px; border: 5px solid rgba(255, 112, 67, 0.2);
-            border-left-color: #ff7043; border-radius: 50%;
-            animation: spin 1s linear infinite;
+            border-left-color: #ff7043; border-radius: 50%; animation: spin 1s linear infinite;
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .loading-text {
-            margin-top: 15px; font-size: 16px; font-weight: bold; color: #ff7043; letter-spacing: 2px;
-        }
+        .loading-text { margin-top: 15px; font-size: 16px; font-weight: bold; color: #ff7043; letter-spacing: 2px; }
 
         /* モーダル関連 */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.4); z-index: 2000; display: flex; justify-content: center; align-items: center; }
@@ -85,7 +95,6 @@
         .mini-clear-btn { padding: 4px 8px; font-size: 11px; cursor: pointer; border: 1px solid #ccc; border-radius: 4px; background: #f8f9fa; }
         .mini-clear-btn:hover { background: #e2e6ea; }
 
-        /* ▼ カスタムプルダウン（アコーディオン式）のデザイン ▼ */
         .custom-select { border: 1px solid #ccc; border-radius: 6px; margin-bottom: 5px; background: #fff; }
         .custom-select summary { padding: 10px; cursor: pointer; font-size: 14px; list-style: none; display: flex; justify-content: space-between; align-items: center; user-select: none; }
         .custom-select summary::-webkit-details-marker { display: none; } 
@@ -108,7 +117,6 @@
 </head>
 <body>
 
-<!-- ▼ 画面全体を覆うローディングUI ▼ -->
 <div id="global-loading">
     <div class="spinner"></div>
     <div class="loading-text">データを読み込み中...</div>
@@ -124,7 +132,6 @@
             <strong>🐈 データシート</strong>
             <button id="toggle-filter-btn" class="control-btn">🔍 詳細フィルター</button>
         </div>
-        <!-- ▼ 変更点：プルダウンの選択肢を追加し、名前を固定 ▼ -->
         <select id="project-selector">
             <option value="https://script.google.com/macros/s/AKfycbxxNvrgs0vTWNF5W8SWpSoaeFRFF5fK0iypGjDB427Y8e9SPZn84eqma7GV8mGOzHJSIA/exec">北大東</option>
             <option value="https://script.google.com/macros/s/AKfycbzrGvMMEtmnZbL3cAdAq56MKoxmzE6W97kRAAGNtcgManeT2-231kqK7lVRrxI8j88/exec">南大東</option>
@@ -143,7 +150,6 @@
             <button id="clear-filter-btn" class="modal-clear-btn">全て表示(全解除)</button>
         </div>
         <div class="modal-body">
-            
             <label class="section-title">
                 <span>📅 目撃期間</span>
                 <button type="button" id="clear-date-btn" class="mini-clear-btn">期間のみ解除</button>
@@ -177,7 +183,6 @@
                 <summary>選択する</summary>
                 <div id="filter-pattern" class="checkbox-group"></div>
             </details>
-            
         </div>
         <button id="apply-filter-btn" class="modal-apply-btn">適用する</button>
     </div>
@@ -186,9 +191,26 @@
 <script>
     // 1. 地図の初期化
     const map = L.map('map').setView([36.2048, 138.2529], 5);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap contributors'
+
+    // ▼ 地図レイヤーの追加（国土地理院 標準地図 ＆ 衛星写真） ▼
+    // ① 国土地理院 標準地図（デフォルトで表示）
+    const gsiStdLayer = L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png', {
+        attribution: '<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank">国土地理院</a>',
+        maxZoom: 18
     }).addTo(map);
+
+    // ② 国土地理院 最新航空写真（衛星写真）
+    const gsiPhotoLayer = L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg', {
+        attribution: '<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank">国土地理院</a>',
+        maxZoom: 18
+    });
+
+    // 右上に地図切り替えコントローラーを追加
+    const baseMaps = {
+        "標準地図 (国土地理院)": gsiStdLayer,
+        "衛星写真 (国土地理院)": gsiPhotoLayer
+    };
+    L.control.layers(baseMaps).addTo(map);
 
     const markerGroup = L.featureGroup().addTo(map);
     let markers = {}; 
@@ -236,24 +258,32 @@
         dataArray.forEach(cat => {
             if(cat.lat && cat.lng) {
                 const marker = L.marker([cat.lat, cat.lng], { icon: nekoIcon });
+                
+                // ▼ Google Maps ストリートビューのURL作成（APIキー不要） ▼
+                const svUrl = `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${cat.lat},${cat.lng}`;
+
                 let popupHtml = `<b>${cat.nickname || '名無し'}</b><br>`;
                 popupHtml += `日時: ${cat.datetime || '不明'}<br>`;
                 popupHtml += `柄: ${cat.pattern || '-'} / 頭数: ${cat.catCount || 0}<br>`;
                 popupHtml += `耳カット: ${cat.earCut || '不明'}<br>`;
+                
+                // ストリートビューボタンを追加
+                popupHtml += `<br><a href="${svUrl}" target="_blank" class="streetview-btn">📷 ストリートビューを見る</a><br>`;
+
                 if (cat.photoUrl) {
                     popupHtml += `<img src="${cat.photoUrl}" class="popup-img">`;
                 }
+                
                 marker.bindPopup(popupHtml);
                 markerGroup.addLayer(marker);
                 markers[cat.id] = marker; 
                 
-                // ▼ ポップアップが開いた時に行を選択 ▼
                 marker.on('popupopen', () => {
                     table.deselectRow(); 
                     table.selectRow(cat.id); 
                     table.scrollToRow(cat.id, "center", false).catch(err => {}); 
                 });
-                // ▼ ポップアップが閉じた時（選択解除）に行の色を消す ▼
+
                 marker.on('popupclose', () => {
                     table.deselectRow();
                 });
@@ -289,7 +319,6 @@
 
     // 3. データの取得
     async function loadData(url) {
-        // ▼ 読み込み開始時に全画面ローディングを表示 ▼
         document.getElementById('global-loading').classList.remove('hidden');
         
         try {
@@ -297,10 +326,6 @@
             const response = await fetch(requestUrl);
             const json = await response.json();
             
-            // ▼ 変更点：プルダウンの名前を固定にするため、JSONのシート名で上書きする処理をコメントアウト ▼
-            // const selector = document.getElementById('project-selector');
-            // selector.options[selector.selectedIndex].text = json.sheetName;
-
             await table.setData(json.data);
             updateFilterCheckboxes(json.data);
 
@@ -311,7 +336,6 @@
             console.error('データ取得エラー:', error);
             alert('データの読み込みに失敗しました。');
         } finally {
-            // ▼ 読み込み完了後に全画面ローディングを非表示 ▼
             document.getElementById('global-loading').classList.add('hidden');
         }
     }
@@ -337,7 +361,6 @@
         return Array.from(checkboxes).map(cb => cb.value);
     }
 
-    // ▼ フィルターモーダルのボタンイベント ▼
     document.getElementById('toggle-filter-btn').addEventListener('click', () => {
         document.getElementById('filter-modal').classList.remove('hidden');
     });
@@ -356,7 +379,6 @@
         document.getElementById('filter-modal').classList.add('hidden');
     });
 
-    // 「全解除」ボタン
     document.getElementById('clear-filter-btn').addEventListener('click', () => {
         document.getElementById('filter-date-start').value = "";
         document.getElementById('filter-date-end').value = "";
@@ -365,13 +387,11 @@
         document.getElementById('filter-modal').classList.add('hidden');
     });
 
-    // 「期間のみ解除」ボタン
     document.getElementById('clear-date-btn').addEventListener('click', () => {
         document.getElementById('filter-date-start').value = "";
         document.getElementById('filter-date-end').value = "";
     });
 
-    // リサイズと開閉イベント
     const resizer = document.getElementById('resizer');
     const sidebar = document.getElementById('sidebar');
     let isResizing = false;
@@ -429,7 +449,6 @@
         loadData(e.target.value);
     });
 
-    // 初期ロード
     loadData(selector.value);
 </script>
 
